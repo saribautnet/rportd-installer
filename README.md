@@ -25,12 +25,13 @@ script has some dependencies.
 
 Currently, supported:
 
-| Distribution | Version | supported Archs                | Guacd support¹ |
-|--------------|---------|-----------------------------|----------------|
-| Ubuntu Linux |20.04 (focal)| `x86_64` `aarch64`      | yes            |
+| Distribution | Version       | supported Archs               | Guacd support¹ |
+|--------------|---------------|----------------------------|----------------|
+| Ubuntu Linux | 22.04 (jammy) | `x86_64`     | yes            |
+| Ubuntu Linux | 20.04 (focal) | `x86_64` `aarch64`     | yes            |
 | Debian       | 11 (bullseye) | `x86_64` `aarch64` `armv7l` | yes            |
-| Debian       |10 (buster) | `x86_64` `aarch64` `armv7l`    | yes |           
-|  RHEL²       | 8          | `x86_64`                      | no   |          
+| Debian       | 10 (buster)   | `x86_64` `aarch64` `armv7l`   | yes |           
+|  RHEL²       | 8             | `x86_64`                     | no   |          
 
 *¹) For RDP on the browser, rportd depends on a guacamole proxy, just the tiny proxy binary installed
 via [Debian packages](https://bitbucket.org/cloudradar/rport-guacamole/src/main/). The installer handles it
