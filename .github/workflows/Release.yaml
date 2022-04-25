@@ -1,0 +1,79 @@
+name: Release
+on:
+  push:
+    # VERSION=$(date +%y%m).$(date +%d|sed s/^0//).$(date +%k%M|tr -d ' ')
+    # git tag $VERSION -m $VERSION && git push --follow-tags
+    tags:
+      - "*"
+
+jobs:
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Dependencies
+        shell: bash
+        run: |
+          set -e
+          cat /etc/os-release 
+          sudo apt-get update >/dev/null
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl jq ncat
+          curl -LOs "https://github.com/koalaman/shellcheck/releases/download/v0.8.0/shellcheck-v0.8.0.linux.x86_64.tar.xz"
+          tar xf shellcheck-v0.8.0.linux.x86_64.tar.xz shellcheck-v0.8.0/shellcheck
+          sudo mv shellcheck-v0.8.0/shellcheck /usr/local/bin/
+          shellcheck -V
+      - name: Create scripts from snippets
+        shell: bash
+        run: |
+          bash create_installer.sh
+          sed -i "s/^VERSION=0/VERSION=\"${GITHUB_REF_NAME}\"/g" rportd-installer.sh
+          bash create_update.sh
+          sed -i "s/^VERSION=0/VERSION=\"${GITHUB_REF_NAME}\"/g" rportd-update.sh
+      - name: Create Release
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+          PAYLOAD=$(jq -n \
+          --arg tag_name "$VERSION" \
+          --arg target_commitish "main" \
+          --arg name "$VERSION" \
+          --arg body "Release $VERSION" \
+          --argjson draft true \
+          --argjson prerelease true \
+          --argjson generate_release_notes false \
+          '$ARGS.named')
+          echo "${PAYLOAD}"
+          
+          curl https://api.github.com/repos/${GITHUB_REPOSITORY}/releases -v -s -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: token $TOKEN" -d "$PAYLOAD" -o release.json
+          jq < release.json
+      - name: Upload files to release
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          RELEASE_ID=$(jq -r .id < release.json)
+          FILES="rportd-installer.sh rportd-update.sh"
+          for FILE in $FILES;do
+            curl -s --fail -H "Authorization: token $TOKEN" \
+            -H "Content-Type: $(file -b --mime-type $FILE)" \
+            --data-binary @$FILE \
+            "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=$(basename $FILE)"
+          done
+      - name: Publish on Webserver
+        shell: bash
+        env:
+          SSH_PRIV_KEY: ${{ secrets.SSH_PRIV_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run : |
+          test -e ~/.ssh || mkdir ~/.ssh 
+          ls -la ~
+          echo "$SSH_PRIV_KEY">~/.ssh/id_ed25519 && chmod 0400 ~/.ssh/id_ed25519
+          ls -la ~/.ssh
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P ${SSH_PORT} rportd-*.sh ${SSH_USER}@${SSH_HOST}:/var/www/get.rport.io/public/
