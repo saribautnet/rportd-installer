@@ -1,5 +1,5 @@
 # Install the RPort Server
-ARCH=$(uname -m | sed s/aarch64/arm64/)
+ARCH=$(uname -m)
 DOWNLOAD_URL="https://download.rport.io/rportd/${RELEASE}/latest.php?arch=${ARCH}"
 throw_debug "Downloading ${DOWNLOAD_URL}"
 curl -LSs "${DOWNLOAD_URL}" -o rportd.tar.gz
