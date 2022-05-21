@@ -16,6 +16,7 @@ else
   echo "127.0.0.2 rportd.localnet.local" >>/etc/hosts
 fi
 
+echo "Importing SSL CA"
 # Rocky
 if grep -q 'ID_LIKE="rhel' /etc/os-release; then
   cp /etc/rport/ssl/ca/export/rport-ca.crt /usr/share/pki/ca-trust-source/anchors/
@@ -27,10 +28,12 @@ if grep -E "ID=(debian|ubuntu)" /etc/os-release; then
   update-ca-certificates
 fi
 
-URL=https://rportd.localnet.local/api/v1
-curl -sfI ${URL}
+echo "Checking the Webserver is up"
+curl -sfI https://rportd.localnet.local
 # Request the 2FA Token
 # Returns a JWT needed for /verify-2fa
+URL=https://rportd.localnet.local/api/v1
+echo "Requesting 2FA Token"
 curl -fs -u admin:"${ADMIN_PASSWORD}" ${URL}/login -o auth.json
 test -e auth.json
 
