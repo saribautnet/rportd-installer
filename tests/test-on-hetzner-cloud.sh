@@ -14,7 +14,10 @@ cd "$(dirname $0)"
 #----------------------------------------------------------------------------------------------------------------------
 init() {
   echo " Initializing"
-  (cd ..; ./create_installer.sh)
+  (
+    cd ..
+    ./create_installer.sh
+  )
   # Source your personal settings
   . .env
   # Generate a name for the VM
@@ -86,10 +89,20 @@ create_random_fqdn() {
 #       RETURNS:
 #----------------------------------------------------------------------------------------------------------------------
 execute_installer() {
-  echo "🖥️  executing 'bash rportd-installer.sh ${INSTALL_APPEND}' remotely now."
-  test -e remote-out.log && rm -f remote-out.log
   SSH_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -l root"
-  ssh ${SSH_OPTS} "${IP}" "bash -s -- ${INSTALL_APPEND}" <../rportd-installer.sh | tee remote-out.log
+  if [ "$PUBLIC_SERVICE" -eq 0 ]; then
+    echo "🖥️  executing 'bash rportd-installer.sh ${INSTALL_APPEND}' remotely now."
+    echo "    Using local installer script"
+    test -e remote-out.log && rm -f remote-out.log
+    ssh "${SSH_OPTS}" "${IP}" "bash -s -- ${INSTALL_APPEND}" <../rportd-installer.sh | tee remote-out.log
+  else
+    echo "  Using public installer script"
+    cat << EOF |ssh ${SSH_OPTS} "${IP}" bash
+curl -JO https://get.rport.io
+sudo bash rportd-installer.sh -v
+sudo bash rportd-installer.sh ${INSTALL_APPEND}
+EOF
+  fi
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -121,8 +134,8 @@ delete_vm() {
   FQDN=$(grep "^FQDN" "$LOG_FILE" | awk '{print $2}')
   if echo "$FDQN" | grep -q "${GODADDY_TLD}"; then
     echo "Deleting FQDN ${FQDN}"
-    TLD=$(echo "$FQDN"|cut -d'.' -f2-3)
-    NAME=$(echo "$FQDN"|cut -d'.' -f1)
+    TLD=$(echo "$FQDN" | cut -d'.' -f2-3)
+    NAME=$(echo "$FQDN" | cut -d'.' -f1)
     daddy remove -d "${TLD}" -t A -n "${NAME}" -f
     daddy show -d "${TLD}"
   fi
@@ -143,18 +156,20 @@ Usage $0 [OPTION(s)]
 -r,--random-fqdn generate a random FQDN locally before executing the installer.
 -i,--installer-args append string(s) to the rportd-installer.sh
 -d,--delete-vm
+-p,--public-service Use the public service get.rport.io instead of the locally generated scripts
 "
 }
 
 # parse options
 TEMP=$(getopt \
-  -o dhri: \
-  --long help,random-fqdn,delete-vm,installer-args: \
+  -o pdhri: \
+  --long help,public-service,random-fqdn,delete-vm,installer-args: \
   -- "$@")
 eval set -- "$TEMP"
 INSTALL_APPEND=""
 RANDOM_FQDN=0
 LOG_FILE="cloud-test.log"
+PUBLIC_SERVICE=0
 
 # extract options and their arguments into variables.
 while true; do
@@ -174,6 +189,10 @@ while true; do
   -d | --delete-vm)
     delete_vm
     exit 0
+    ;;
+  -p | --public-service)
+    PUBLIC_SERVICE=1
+    shift 1
     ;;
   --)
     shift
