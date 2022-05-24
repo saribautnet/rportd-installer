@@ -13,6 +13,7 @@ wait_for_dns_ready() {
   done
   for i in $(seq 30); do
     if fqdn_is_public "${FQDN}"; then
+      echo ""
       throw_info "DNS entry has become available. "
       DNS_READY=1
       break

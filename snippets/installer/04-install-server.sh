@@ -17,8 +17,13 @@ sed -i "s/key_seed = .*/key_seed =\"${KEY_SEED}\"/g" /etc/rport/rportd.conf
 
 # Create a systemd service
 /usr/local/bin/rportd --service install --service-user rport --config /etc/rport/rportd.conf||true
-sed -i '/^\[Service\]/a LimitNOFILE=1048576' /etc/systemd/system/rportd.service
-sed -i '/^\[Service\]/a LimitNPROC=512' /etc/systemd/system/rportd.service
+SYSTEMD_SERVICE="/etc/systemd/system/rportd.service"
+if [ -e "$SYSTEMD_SERVICE" ];then
+  throw_debug "Service file ${SYSTEMD_SERVICE} created"
+else
+  throw_fatal "Failed to create systemd service file ${SYSTEMD_SERVICE}"
+fi
+sed -i '/^\[Service\]/a LimitNPROC=512' "$SYSTEMD_SERVICE"
 systemctl daemon-reload
 #systemctl start rportd
 systemctl enable rportd
