@@ -8,7 +8,7 @@ else
 fi
 
 cd /tmp
-ARCH=$(uname -m | sed s/"armv\(6\|7\)l"/"armv\1"/ | sed s/aarch64/arm64/)
+ARCH=$(uname -m)
 URL="https://download.rport.io/rportd/${RELEASE}/?arch=Linux_${ARCH}&gt=${CURRENT_VERSION}"
 curl -Ls "${URL}" -o rportd.tar.gz
 test -e rportd && rm -f rportd
