@@ -19,7 +19,7 @@ set_fqdn() {
   if fqdn_is_public "${FQDN}"; then
     PUBLIC_FQDN=1
   else
-    throw_info "FQDN ${FQDN} seems to be privat or local."
+    throw_info "FQDN ${FQDN} seems to be private or local."
   fi
 }
 
