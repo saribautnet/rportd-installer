@@ -50,12 +50,13 @@ eval set -- "$TEMP"
 RELEASE=stable
 API_PORT=443
 CLIENT_PORT=80
-DB_FILE=/var/lib/rport/user-auth.db
+DB_FILE=/var/lib/rport/auth.db
 DNS_CREATED=0
 USES_NAT=2
 TUNNEL_PORT_RANGE='20000-30000'
 TWO_FA=email
 INSTALL_GUACD=1
+PUBLIC_FQDN=0
 VERSION=0
 
 # extract options and their arguments into variables.
@@ -169,4 +170,21 @@ if [ -z $EMAIL ] && [ $TWO_FA != 'none' ]; then
   echo " | To send the first 2fa-token a ${bold}valid email address is needed${normal}."
   echo " | Your email address will be stored only locally on this system inside the user database."
   ask_for_email
+fi
+
+if [ -n "$EMAIL" ] && [ $PUBLIC_FQDN -eq 0 ]; then
+  throw_error "2FA via the free-2fa-email service requires a public FQDN."
+  throw_hint "Use TOTP or disable 2FA. You can add your own SMTP server later."
+  throw_fatal "Configuration conflict."
+fi
+
+if id rport >/dev/null 2>&1 ;then
+  if getent passwd rport|cut -d: -f6|grep -q "/var/lib/rport"; then
+    true
+  else
+    throw_error "A user 'rport' already exists but with a wrong home dir."
+    throw_hint "Delete the user or change the home dir to /var/lib/rport."
+    throw_fatal "Requirements not met."
+  fi
+
 fi

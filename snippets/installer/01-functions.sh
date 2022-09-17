@@ -15,7 +15,6 @@ fqdn_is_public() {
 
 set_fqdn() {
   FQDN=$(echo "$1"| tr '[:upper:]' '[:lower:]')
-  PUBLIC_FQDN=0
   if fqdn_is_public "${FQDN}"; then
     PUBLIC_FQDN=1
   else
