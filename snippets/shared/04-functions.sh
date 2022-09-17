@@ -273,6 +273,7 @@ install_guacd() {
   fi
   # shellcheck source=/dev/null
   . /etc/os-release
+  ID=${ID/raspbian/debian}
   GUACD_PKG=rport-guacamole_1.4.0_${ID}_${VERSION_CODENAME}_$(uname -m).deb
   GUACD_DOWNLOAD=https://bitbucket.org/cloudradar/rport-guacamole/downloads/${GUACD_PKG}
   throw_debug "Downloading $GUACD_PKG"
