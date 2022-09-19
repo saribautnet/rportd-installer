@@ -13,11 +13,6 @@ cd "$(dirname $0)"
 #       RETURNS:
 #----------------------------------------------------------------------------------------------------------------------
 init() {
-  echo " Initializing"
-  (
-    cd ..
-    ./create_installer.sh
-  )
   # Source your personal settings
   . .env
   # Generate a name for the VM
@@ -29,6 +24,13 @@ init() {
   export FQDN=$FQDN
   export VM_NAME=$VM_NAME
   export GODADDY_TLD=$GODADDY_TLD
+}
+
+create_installer() {
+  (
+    cd ..
+    ./create_installer.sh
+  )
 }
 
 create_vm() {
@@ -52,7 +54,7 @@ create_vm() {
   loc[3]='Helsinki eu-central'
   loc[4]='Ashburn us-east'
   echo "🌎 VM will be created in ${loc[$LOCATION]}"
-  echo "🚴 Creating VM now ... "
+  echo "🚴 Creating VM ${VM_NAME} now ... "
   hcloud server create --type 1 --name "${VM_NAME}" --location "$LOCATION" --image ${OS_IMAGE} --ssh-key "${SSH_KEY}" >"$LOG_FILE"
   sleep 5
   IP=$(grep "^IPv4" "$LOG_FILE" | awk '{print $2}')
@@ -64,6 +66,8 @@ create_vm() {
     echo "$i" >/dev/null
   done
   export VM_ID=$VM_ID
+  echo "IP=$IP" >.current_vm
+  echo "VM_NAME=$VM_NAME" >>.current_vm
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -79,6 +83,9 @@ create_random_fqdn() {
     daddy add -d "${GODADDY_TLD}" -t A -n "${VM_NAME}" -v "$IP"
     INSTALL_APPEND=$INSTALL_APPEND" --fqdn ${FQDN}"
     echo "FQDN: ${FQDN}" >>"$LOG_FILE"
+    echo "FQDN=${FQDN}" >>.current_vm
+    echo "⏳ Waiting for DNS record to be published ..."
+    sleep 10
   fi
 }
 
@@ -90,19 +97,20 @@ create_random_fqdn() {
 #----------------------------------------------------------------------------------------------------------------------
 execute_installer() {
   SSH_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -l root"
+  echo "🖥️ executing 'bash rportd-installer.sh ${INSTALL_APPEND}' remotely now."
   if [ "$PUBLIC_SERVICE" -eq 0 ]; then
-    echo "🖥️  executing 'bash rportd-installer.sh ${INSTALL_APPEND}' remotely now."
-    echo "    Using local installer script"
+    echo "🏠 Using local installer script"
     test -e remote-out.log && rm -f remote-out.log
-    ssh "${SSH_OPTS}" "${IP}" "bash -s -- ${INSTALL_APPEND}" <../rportd-installer.sh | tee remote-out.log
+    ssh ${SSH_OPTS} "${IP}" "bash -s -- ${INSTALL_APPEND}" <../rportd-installer.sh | tee remote-out.log
   else
-    echo "  Using public installer script"
-    cat << EOF |ssh ${SSH_OPTS} "${IP}" bash
+    echo "☁️ Using public installer script"
+    cat <<EOF | ssh ${SSH_OPTS} "${IP}" bash
 curl -JO https://get.rport.io
 sudo bash rportd-installer.sh -v
 sudo bash rportd-installer.sh ${INSTALL_APPEND}
 EOF
   fi
+  echo "IP=${IP}"
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -138,6 +146,19 @@ delete_vm() {
     NAME=$(echo "$FQDN" | cut -d'.' -f1)
     daddy remove -d "${TLD}" -t A -n "${NAME}" -f
     daddy show -d "${TLD}"
+  fi
+
+  FILES=(.current_vm cloud-test.log remote-out.log)
+  for F in "${FILES[@]}"; do
+    test -e "$F" && rm -f "$F"
+  done
+}
+
+use_current_vm() {
+  if [ -e .current_vm ]; then
+    . ./.current_vm
+    echo "♻️ Using current VM $VM_NAME $IP"
+    fping "$IP"
   fi
 }
 
@@ -206,7 +227,11 @@ while true; do
   esac
 done
 
-init
-create_vm
-if [ $RANDOM_FQDN -eq 1 ]; then create_random_fqdn; fi
+use_current_vm # Look for an existing VM
+if [ -z "$VM_NAME" ]; then
+  init
+  create_vm
+  if [ $RANDOM_FQDN -eq 1 ]; then create_random_fqdn; fi
+fi
+create_installer
 execute_installer
