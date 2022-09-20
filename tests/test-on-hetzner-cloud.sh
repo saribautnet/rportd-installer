@@ -85,7 +85,25 @@ create_random_fqdn() {
     echo "FQDN: ${FQDN}" >>"$LOG_FILE"
     echo "FQDN=${FQDN}" >>.current_vm
     echo "⏳ Waiting for DNS record to be published ..."
-    sleep 10
+    sleep 5
+    for I in $(seq 1 20);do
+      echo "(${I}) Checking DNS ..."
+      if fqdn_is_public "${FQDN}";then
+        echo "🥳 FQDN $FQDN is now public."
+        return 0
+      else
+        sleep 3
+      fi
+    done
+    echo "👺 FQDN has not become public."
+  fi
+}
+
+fqdn_is_public() {
+  if curl -fs -H 'accept: application/dns-json' "https://1.1.1.1/dns-query?name=${1}" | grep -q '"Status":0'; then
+    return 0
+  else
+    return 1
   fi
 }
 

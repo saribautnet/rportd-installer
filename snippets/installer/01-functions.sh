@@ -6,7 +6,7 @@
 #       RETURNS:  exit code 0 if query resolves, 1 otherwise
 #----------------------------------------------------------------------------------------------------------------------
 fqdn_is_public() {
-  if curl -fs -H 'accept: application/dns-json' "https://cloudflare-dns.com/dns-query?name=${1}" | grep -q '"Status":0'; then
+  if curl -fs -H 'accept: application/dns-json' "https://1.1.1.1/dns-query?name=${1}" | grep -q '"Status":0'; then
     return 0
   else
     return 1
