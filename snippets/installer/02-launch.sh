@@ -172,14 +172,14 @@ if [ -z $EMAIL ] && [ $TWO_FA != 'none' ]; then
   ask_for_email
 fi
 
-if [ -n "$EMAIL" ] && [ $PUBLIC_FQDN -eq 0 ] && [ -n "$FQDN" ]; then
+if [ -n "$EMAIL" ] && [ $PUBLIC_FQDN -eq 0 ] && [ -n "$FQDN" ] && [ "$EMAIL" != "test@example.com" ]; then
   throw_error "2FA via the free-2fa-email service requires a public FQDN."
   throw_hint "Use TOTP or disable 2FA. You can add your own SMTP server later."
   throw_fatal "Configuration conflict."
 fi
 
-if id rport >/dev/null 2>&1 ;then
-  if getent passwd rport|cut -d: -f6|grep -q "/var/lib/rport"; then
+if id rport >/dev/null 2>&1; then
+  if getent passwd rport | cut -d: -f6 | grep -q "/var/lib/rport"; then
     true
   else
     throw_error "A user 'rport' already exists but with a wrong home dir."

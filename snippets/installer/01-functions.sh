@@ -16,6 +16,7 @@ fqdn_is_public() {
 set_fqdn() {
   FQDN=$(echo "$1"| tr '[:upper:]' '[:lower:]')
   if fqdn_is_public "${FQDN}"; then
+    throw_debug "FQDN ${FQDN} is publicly resolvable."
     PUBLIC_FQDN=1
   else
     throw_info "FQDN ${FQDN} seems to be private or local."
