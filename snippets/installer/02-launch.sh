@@ -18,6 +18,7 @@ Options:
 -n,--no-2fa Disable two factor authentification
 -p,--port-range ports dynamically used for active tunnels. Default 20000-30000
 -g,--skip-guacd Do not install a version of the Guacamole Proxy Daemon needed for RDP over web.
+-f,--use-version {VERSION} use the specific version of rport
 
 Examples:
 sudo bash $0 --email user@example.com
@@ -42,8 +43,8 @@ EOF
 # Read the command line options and map to a function call
 #
 TEMP=$(getopt \
-  -o vhta:sone:d:c:d:p:i:ug \
-  --long version,help,unstable,fqdn:,email:,client-port:,api-port:,port-range:,client-url:,uninstall,skip-nat,skip-guacd,totp,no-2fa \
+  -o fvhta:sone:d:c:d:p:i:ug \
+  --long version,help,unstable,fqdn:,email:,client-port:,api-port:,port-range:,client-url:,use-version:,uninstall,skip-nat,skip-guacd,totp,no-2fa \
   -- "$@")
 eval set -- "$TEMP"
 
@@ -118,6 +119,10 @@ while true; do
   -v | --version)
     echo "Version $VERSION"
     exit 0
+    ;;
+  -f | --use-version)
+    USE_VERSION="$2"
+    shift 2
     ;;
   --)
     shift

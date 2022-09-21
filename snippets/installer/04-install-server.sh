@@ -1,6 +1,17 @@
 # Install the RPort Server
 ARCH=$(uname -m)
-DOWNLOAD_URL="https://download.rport.io/rportd/${RELEASE}/latest.php?arch=${ARCH}"
+if [ -z "$USE_VERSION" ];then
+  # Use latest version
+  DOWNLOAD_URL="https://download.rport.io/rportd/${RELEASE}/latest.php?arch=${ARCH}"
+else
+  # Use a specific version
+  DOWNLOAD_URL="https://github.com/cloudradar-monitoring/rport/releases/download/${USE_VERSION}/rportd_${USE_VERSION}_Linux_$(uname -m).tar.gz"
+  if curl -i "$DOWNLOAD_URL" 2>&1 |grep -q "HTTP.*302";then
+    true
+  else
+    throw_fatal "No download found for version ${USE_VERSION}"
+  fi
+fi
 throw_debug "Downloading ${DOWNLOAD_URL}"
 curl -LSs "${DOWNLOAD_URL}" -o rportd.tar.gz
 tar vxzf rportd.tar.gz -C /usr/local/bin/ rportd
