@@ -8,10 +8,10 @@
 #
 #          BUGS: https://github.com/cloudradar-monitoring/rportd-installer/issues
 #
-#     COPYRIGHT: (c) 2022 by the CloudRadar Team,
+#     COPYRIGHT: (c) 2022 by the RealVNC Team,
 #
 #       LICENSE: MIT
-#  ORGANIZATION: cloudradar GmbH, Potsdam, Germany (cloudradar.io)
+#  ORGANIZATION: RealVNC Ltd., Cambridge, United Kingdom (realvnc.com)
 #       CREATED: 10/10/2020
-#       UPDATED: 08/04/2022
+#       UPDATED: 26/10/2022
 #======================================================================================================================

@@ -33,6 +33,20 @@ create_installer() {
   )
 }
 
+create_update() {
+  (
+    cd ..
+    ./create_update.sh
+  )
+}
+
+copy_ssh_keys() {
+  for FILE in $(find .ssh -type f -name "*.pub"); do
+    echo Installing "$FILE"
+    ssh-copy-id -f -i "$FILE" root@"$IP"
+  done
+}
+
 create_vm() {
   # Set the OS Image
   if [ -z "$OS_IMAGE" ]; then
@@ -68,6 +82,7 @@ create_vm() {
   export VM_ID=$VM_ID
   echo "IP=$IP" >.current_vm
   echo "VM_NAME=$VM_NAME" >>.current_vm
+  copy_ssh_keys
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -86,10 +101,12 @@ create_random_fqdn() {
     echo "FQDN=${FQDN}" >>.current_vm
     echo "⏳ Waiting for DNS record to be published ..."
     sleep 5
-    for I in $(seq 1 20);do
+    for I in $(seq 1 20); do
       echo "(${I}) Checking DNS ..."
-      if fqdn_is_public "${FQDN}";then
+      if fqdn_is_public "${FQDN}"; then
         echo "🥳 FQDN $FQDN is now public."
+        echo "Waiting for DNS to be fully propagated ..."
+        sleep 5
         return 0
       else
         sleep 3
@@ -114,7 +131,6 @@ fqdn_is_public() {
 #       RETURNS:
 #----------------------------------------------------------------------------------------------------------------------
 execute_installer() {
-  SSH_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -l root"
   echo "🖥️ executing 'bash rportd-installer.sh ${INSTALL_APPEND}' remotely now."
   if [ "$PUBLIC_SERVICE" -eq 0 ]; then
     echo "🏠 Using local installer script"
@@ -129,6 +145,10 @@ sudo bash rportd-installer.sh ${INSTALL_APPEND}
 EOF
   fi
   echo "IP=${IP}"
+}
+
+execute_update() {
+  ssh ${SSH_OPTS} "${IP}" "bash -s -- -t" <../rportd-update.sh
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -157,7 +177,7 @@ delete_vm() {
   hcloud server delete "$VM_ID"
 
   # Delete the FQDN
-  FQDN=$(grep "^FQDN" "$LOG_FILE" | awk '{print $2}')
+  . .current_vm
   if echo "$FDQN" | grep -q "${GODADDY_TLD}"; then
     echo "Deleting FQDN ${FQDN}"
     TLD=$(echo "$FQDN" | cut -d'.' -f2-3)
@@ -177,6 +197,7 @@ use_current_vm() {
     . ./.current_vm
     echo "♻️ Using current VM $VM_NAME $IP"
     fping "$IP"
+    INSTALL_APPEND=$INSTALL_APPEND" --fqdn ${FQDN}"
   fi
 }
 
@@ -191,24 +212,26 @@ help() {
 Usage $0 [OPTION(s)]
 
 -h,--help show this help message
--f,--fqdn use FQDN for the new rport server instead of generating a random one.
 -r,--random-fqdn generate a random FQDN locally before executing the installer.
 -i,--installer-args append string(s) to the rportd-installer.sh
 -d,--delete-vm
 -p,--public-service Use the public service get.rport.io instead of the locally generated scripts
+-u,--update Update an existing VM with the rport-update.sh script
 "
 }
 
 # parse options
 TEMP=$(getopt \
-  -o pdhri: \
-  --long help,public-service,random-fqdn,delete-vm,installer-args: \
+  -o pdhrui: \
+  --long help,public-service,random-fqdn,delete-vm,update,installer-args: \
   -- "$@")
 eval set -- "$TEMP"
 INSTALL_APPEND=""
 RANDOM_FQDN=0
 LOG_FILE="cloud-test.log"
 PUBLIC_SERVICE=0
+EXEC_UPDATE=0
+SSH_OPTS="-o StrictHostKeyChecking=no -o LogLevel=ERROR -o UserKnownHostsFile=/dev/null -l root"
 
 # extract options and their arguments into variables.
 while true; do
@@ -233,6 +256,10 @@ while true; do
     PUBLIC_SERVICE=1
     shift 1
     ;;
+  -u | --update)
+    EXEC_UPDATE=1
+    shift 1
+    ;;
   --)
     shift
     break
@@ -251,5 +278,10 @@ if [ -z "$VM_NAME" ]; then
   create_vm
   if [ $RANDOM_FQDN -eq 1 ]; then create_random_fqdn; fi
 fi
-create_installer
-execute_installer
+if [ $EXEC_UPDATE -eq 1 ]; then
+  create_update
+  execute_update
+else
+  create_installer
+  execute_installer
+fi

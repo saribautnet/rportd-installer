@@ -8,7 +8,6 @@ Options:
 -t,--unstable  Use the latest unstable version (DANGEROUS!)
 -e,--email {EMAIL}  Don't ask for the email interactively
 -d,--fqdn {FQDN}  Use a custom FQDN. Otherwise a random FQDN on *.users.rport.io will be created.
--k,--skip-dnscheck Do not verify {FQDN} exists. Install anyway.
 -u,--uninstall  Uninstall rportd and all related files
 -c,--client-port {PORT} Use a different port than 80 for the client aka agent connections.
 -i,--client-url {URL} Instruct clients to connect to this URL instead of {FQDN}

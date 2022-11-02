@@ -18,10 +18,6 @@ EOF
 #
 RELEASE=stable
 TEMP=$(getopt -o vhtgb --long version,help,unstable,skip-guacd,skip-backup -- "$@")
-if [ $? -gt 0 ]; then
-  help
-  exit 1
-fi
 eval set -- "$TEMP"
 
 INSTALL_GUACD=1

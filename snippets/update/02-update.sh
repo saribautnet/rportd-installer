@@ -97,6 +97,88 @@ activate_monitoring() {
 }
 activate_monitoring
 
+activate_plus() {
+  if grep -q "\[plus-plugin\]" $CONFIG_FILE; then
+    throw_info "Plus plugin already present."
+    return 0
+  fi
+  cat <<EOF >>$CONFIG_FILE
+[plus-plugin]
+  ## Rport Plus is a paid for binary extension to Rport. Learn more at https://plus.rport.io/
+  # plugin_path = "/usr/local/lib/rport/rport-plus.so"
+
+[plus-oauth]
+  ## The Rport Plus OAuth capability support SSO/OAuth based user sign-in via a number of OAuth identity providers.
+  ## -------------------------------------------------------------------------- ##
+  ## Learn more at https://plus.rport.io/auth/oauth-introduction/
+  ## -------------------------------------------------------------------------- ##
+
+  ## provider - Required. Currently supported "github", "microsoft" or "google".
+  # provider = "github"
+
+  ## authorize_url - OAuth provider base url used for handling the user's authorization.
+  # authorize_url = "https://github.com/login/oauth/authorize"
+
+  ## redirect_uri - Required. URL where the OAuth provider will redirect  after completing the user’s authorization.
+  # redirect_uri = "https://<FQDN-OF-RPORT>/oauth/callback"
+
+  ## token_url - Required. OAuth provider base url where rportd will get an OAuth
+  ## access token for looking up the user and organization/group info.
+  # token_url = "https://github.com/login/oauth/access_token"
+
+  ## client_id - identifier assigned to the Rport 'app' during the OAuth provider setup.
+  # client_id = "<your client id>"
+
+  ## client_secret - a secret provided by the OAuth provider to be used when exchanging an authorization code for
+  ## OAuth provider tokens. Keep private and DO NOT included in any VCS, unencrypted backups, etc.
+  # client_secret = "<your client secret>"
+
+  ## device_client_id - google device style flow only
+  ## identifier assigned to the Rport 'app' configured as part of the google device flow setup.
+  # device_client_id = "<your google device client id>"
+
+  ## device_authorize_url - Required. All the OAuth providers use a different url from the authorize_url for the
+  ## device flow.  - if using the device style flow.
+  # device_authorize_url = "https://github.com/login/device/code"
+
+  ## device_client_secret - google device style flow only
+  ## Keep private and DO NOT included in any VCS, unencrypted backups, etc.
+  # device_client_secret = "<your google device client secret>"
+
+  ## required_organization - GitHub only. GitHub organization whose users have permission to access the Rport server.
+  # required_organization = ""
+
+  ## required_group_id - Microsoft and Google only. Group id whose members have permission to access the RPort server.
+  # required_group_id = ""
+
+  ## permitted_user_list - Allow only users configured via the existing Rport 'api auth' mechanism.
+  # permitted_user_list = true
+
+  ## permitted_user_match - provides further control of the permitted users via a regex value.
+  # permitted_user_match = ""
+EOF
+  throw_info "Plus plugin inserted but NOT activated. https://kb.rport.io/digging-deeper/rport-plus"
+}
+activate_plus
+
+## Migrate renamed settings
+if grep -q keep_lost_clients $CONFIG_FILE; then
+  sed -i "s/keep_lost_clients/keep_disconnected_clients/g" $CONFIG_FILE
+  throw_info "Migrated config 'keep_lost_clients' to 'keep_disconnected_clients'."
+fi
+
+## Update 2FA script if needed
+if grep -q "\-F remote_address=" /usr/local/bin/2fa-sender.sh;then
+  true
+else
+  SERVER_URL=$(grep "\-F url=" /usr/local/bin/2fa-sender.sh|grep -o "\".*\""|tr -d '"')
+  mv /usr/local/bin/2fa-sender.sh /tmp/2fa-sender.sh
+  throw_info "/usr/local/bin/2fa-sender.sh backed to /tmp/2fa-sender.sh"
+  create_2fa_script
+  sed -i "s|_URL_|${SERVER_URL}|g" /usr/local/bin/2fa-sender.sh
+  throw_info "/usr/local/bin/2fa-sender.sh updated"
+fi
+
 # Update the frontend
 cd /var/lib/rport/docroot/
 rm -rf ./*
