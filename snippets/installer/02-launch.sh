@@ -176,7 +176,7 @@ if [ -z $EMAIL ] && [ $TWO_FA != 'none' ]; then
   ask_for_email
 fi
 
-if [ -n "$EMAIL" ] && [ $PUBLIC_FQDN -eq 0 ] && [ -n "$FQDN" ] && [ "$EMAIL" != "test@example.com" ]; then
+if [ $TWO_FA == "email" ] && [ -n "$EMAIL" ] && [ $PUBLIC_FQDN -eq 0 ] && [ -n "$FQDN" ] && [ "$EMAIL" != "test@example.com" ]; then
   throw_error "2FA via the free-2fa-email service requires a public FQDN."
   throw_hint "Use TOTP or disable 2FA. You can add your own SMTP server later."
   throw_fatal "Configuration conflict."
