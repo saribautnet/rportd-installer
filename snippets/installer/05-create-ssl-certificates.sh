@@ -13,17 +13,17 @@ create_selfsigned_cert() {
   SSL_EXT_FILE=/etc/rport/ssl/${FQDN}.ext
   ################## Create a CA #############################################
   # Generate private key
-  CA_NAME=${FQDN}
+  CA_NAME="${FQDN} Root CA"
   CA_CERT=/etc/rport/ssl/ca/export/${CA_NAME}-ca-root-cert.crt
   CA_KEY=/etc/rport/ssl/${CA_NAME}-ca.key
   openssl genrsa -out "${CA_KEY}" 2048
   # Generate root certificate
   openssl req -x509 -new -nodes -key "${CA_KEY}" -sha256 -days 825 -out "${CA_CERT}" \
-    -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=${CA_NAME}.local"
+    -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=${CA_NAME}"
 
   if [ -e "${CA_CERT}" ]; then
     throw_debug "Certificate Authority created in ${CA_CERT}. Import this file into OS and/or browser."
-    throw_info "Read https://kb.rport.io/ carefully."
+    throw_info "Read https://kb.rport.io/install-the-rport-server/install-on-premises#import-the-root-certificate-authority-root-ca carefully."
   else
     throw_fatal "Creating Certificate Authority failed."
     false
