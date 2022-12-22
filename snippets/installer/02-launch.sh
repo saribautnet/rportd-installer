@@ -135,12 +135,21 @@ while true; do
   esac
 done
 
+## Check is OS is supported
 if [ -e /etc/os-release ] && grep -q 'REDHAT_SUPPORT_PRODUCT_VERSION="7"' /etc/os-release; then
   throw_fatal "Sorry. RedHat/CentOS/Alma/Rocky Linux >=8 required."
 fi
 
 if [ -e /etc/os-release ] && grep -q '^REDHAT_SUPPORT_PRODUCT_VERSION=".*Stream"$' /etc/os-release; then
   throw_fatal "Sorry. CentOS Stream not supported yet."
+fi
+
+if [ -e /etc/os-release ] && grep -q "^NAME=\"Ubuntu\"" /etc/os-release; then
+  if grep -q "^VERSION=.*LTS" /etc/os-release; then
+    true
+  else
+    throw_fatal "Sorry. Ubuntu none LTS versions are not supported."
+  fi
 fi
 
 if [ -e /etc/os-release ] && grep -q "^ID_LIKE.*rhel" /etc/os-release; then
