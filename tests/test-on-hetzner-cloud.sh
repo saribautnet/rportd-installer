@@ -148,7 +148,8 @@ EOF
 }
 
 execute_update() {
-  ssh ${SSH_OPTS} "${IP}" "bash -s -- -t" <../rportd-update.sh
+  echo "🖥️ Going to execute 'rportd-update.sh  ${INSTALL_APPEND}'"
+  ssh ${SSH_OPTS} "${IP}" "bash -s -- ${INSTALL_APPEND}" <../rportd-update.sh
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -197,7 +198,11 @@ use_current_vm() {
     . ./.current_vm
     echo "♻️ Using current VM $VM_NAME $IP"
     fping "$IP"
-    INSTALL_APPEND=$INSTALL_APPEND" --fqdn ${FQDN}"
+    if echo "$INSTALL_APPEND" | grep -E "(\-\-fqdn |\-d |\-u$|\-\- uninstall$)"; then
+      echo "FQDN specified manually or not needed."
+    elif [ "$EXEC_UPDATE" -eq 0 ];then
+      INSTALL_APPEND=$INSTALL_APPEND" --fqdn ${FQDN}"
+    fi
   fi
 }
 
@@ -217,6 +222,10 @@ Usage $0 [OPTION(s)]
 -d,--delete-vm
 -p,--public-service Use the public service get.rport.io instead of the locally generated scripts
 -u,--update Update an existing VM with the rport-update.sh script
+
+Example:
+$0 -r -i \"-e user@example.com\"  # Install latest stable version
+$0 -u -i \"-t\"                   # Update to the latest unstable version
 "
 }
 

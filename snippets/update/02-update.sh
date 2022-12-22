@@ -51,13 +51,15 @@ throw_info "/usr/local/bin/rportd updated to version $TARGET_VERSION"
 # If you come from a old versions create columns if missing.
 # Ignore the errors if the columns exist.
 throw_info "Performing database migrations where needed."
-if [ -e /var/lib/rport/user-auth.db ]; then
-  sqlite3 /var/lib/rport/user-auth.db \
+if [ -e "${AUTH_DB}" ]; then
+  sqlite3 "${AUTH_DB}" \
     'ALTER TABLE "users" ADD column "token" TEXT(36) DEFAULT NULL' 2>/dev/null || true
-  sqlite3 /var/lib/rport/user-auth.db \
+  sqlite3 "${AUTH_DB}" \
     'ALTER TABLE "users" ADD column "two_fa_send_to" TEXT(150) DEFAULT NULL' 2>/dev/null || true
-  sqlite3 /var/lib/rport/user-auth.db \
+  sqlite3 "${AUTH_DB}" \
     'ALTER TABLE "users" ADD column "totp_secret" TEXT DEFAULT ""' 2>/dev/null || true
+  sqlite3 "${AUTH_DB}" \
+    'ALTER TABLE "users" ADD column "password_expired" BOOLEAN NOT NULL CHECK (password_expired IN (0, 1)) DEFAULT 0' 2>/dev/null || true
 fi
 # Activate the new reverse proxy feature
 CONFIG_FILE=/etc/rport/rportd.conf
@@ -167,17 +169,49 @@ if grep -q keep_lost_clients $CONFIG_FILE; then
   throw_info "Migrated config 'keep_lost_clients' to 'keep_disconnected_clients'."
 fi
 
-## Update 2FA script if needed
-if grep -q "\-F remote_address=" /usr/local/bin/2fa-sender.sh;then
-  true
-else
-  SERVER_URL=$(grep "\-F url=" /usr/local/bin/2fa-sender.sh|grep -o "\".*\""|tr -d '"')
-  mv /usr/local/bin/2fa-sender.sh /tmp/2fa-sender.sh
-  throw_info "/usr/local/bin/2fa-sender.sh backed to /tmp/2fa-sender.sh"
-  create_2fa_script
-  sed -i "s|_URL_|${SERVER_URL}|g" /usr/local/bin/2fa-sender.sh
-  throw_info "/usr/local/bin/2fa-sender.sh updated"
-fi
+update_2fa() {
+  ## Update 2FA script if needed
+  if grep -q "\-F remote_address=" /usr/local/bin/2fa-sender.sh; then
+    true
+  else
+    SERVER_URL=$(grep "\-F url=" /usr/local/bin/2fa-sender.sh | grep -o "\".*\"" | tr -d '"')
+    mv /usr/local/bin/2fa-sender.sh /tmp/2fa-sender.sh
+    throw_info "/usr/local/bin/2fa-sender.sh backed to /tmp/2fa-sender.sh"
+    create_2fa_script
+    sed -i "s|_URL_|${SERVER_URL}|g" /usr/local/bin/2fa-sender.sh
+    throw_info "/usr/local/bin/2fa-sender.sh updated"
+  fi
+}
+## Update 2FA script if needed, if present
+[ -e /usr/local/bin/2fa-sender.sh ] && update_2fa
+
+activate_auth_group_details() {
+  if grep -q auth_group_details_table $CONFIG_FILE; then
+    throw_info "Auth group details already enabled"
+    return 0
+  fi
+  sed -i "/\ \ auth_group_table/a \ \ auth_group_details_table = \"group_details\"" $CONFIG_FILE
+  if [ ! -e "${AUTH_DB}" ]; then
+    throw_debug "Auth DB ${AUTH_DB} not found. Maybe not managed by installer."
+    return 0
+  fi
+  if sqlite3 "${AUTH_DB}" '.tables' | grep group_details; then
+    throw_debug "Table group_details already present."
+    return 0
+  fi
+  sqlite3 "${AUTH_DB}" <<EOF
+CREATE TABLE "group_details" (name TEXT, permissions TEXT);
+CREATE UNIQUE INDEX "main"."group_details_name" ON "group_details" ("name" ASC);
+CREATE TABLE "group_details" (
+    "name" TEXT(150) NOT NULL,
+    "permissions" TEXT DEFAULT "{}"
+);
+CREATE UNIQUE INDEX "main"."name" ON "group_details" (
+    "name" ASC
+);
+EOF
+}
+activate_auth_group_details
 
 # Update the frontend
 cd /var/lib/rport/docroot/

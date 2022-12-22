@@ -60,6 +60,7 @@ cat <<EOF|sqlite3 "$DB_FILE"
 CREATE TABLE "users" (
   "username" TEXT(150) NOT NULL,
   "password" TEXT(255) NOT NULL,
+  "password_expired" BOOLEAN NOT NULL CHECK (password_expired IN (0, 1)) DEFAULT 0,
   "token" TEXT(36) DEFAULT NULL,
   "two_fa_send_to" TEXT(150),
   "totp_secret" TEXT DEFAULT ""
@@ -83,7 +84,7 @@ CREATE TABLE "group_details" (
 CREATE UNIQUE INDEX "main"."name" ON "group_details" (
   "name" ASC
 );
-INSERT INTO users VALUES('admin','$PASSWD_HASH',null,'$EMAIL','');
+INSERT INTO users VALUES('admin','$PASSWD_HASH',0,null,'$EMAIL','');
 INSERT INTO groups VALUES('admin','Administrators');
 CREATE TABLE "clients_auth" (
   "id" varchar(100) PRIMARY KEY,

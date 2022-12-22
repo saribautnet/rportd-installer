@@ -23,6 +23,7 @@ eval set -- "$TEMP"
 INSTALL_GUACD=1
 DO_BACKUP=1
 VERSION=0
+AUTH_DB=/var/lib/rport/user-auth.db
 # extract options and their arguments into variables.
 while true; do
   case "$1" in
