@@ -200,8 +200,6 @@ activate_auth_group_details() {
     return 0
   fi
   sqlite3 "${AUTH_DB}" <<EOF
-CREATE TABLE "group_details" (name TEXT, permissions TEXT);
-CREATE UNIQUE INDEX "main"."group_details_name" ON "group_details" ("name" ASC);
 CREATE TABLE "group_details" (
     "name" TEXT(150) NOT NULL,
     "permissions" TEXT DEFAULT "{}"
