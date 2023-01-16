@@ -43,14 +43,6 @@ for i in $(seq 60); do
   fi
   sleep 2
 done
-echo "🌐 Waiting for the network inside the container to come up"
-cat << "EOF"|lxc exec container -- bash
-for I in $(seq 20);do
-  echo "$I"
-  ping -c 1 -w 2 archive.ubuntu.com && break
-  sleep 2
-done
-EOF
 
 echo "🐸 Executing '\$POST_EXEC' inside container"
 printf "%s\n" "${POST_EXEC[@]}" | lxc exec container -- bash
