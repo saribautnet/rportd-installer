@@ -147,6 +147,8 @@ fi
 if [ -e /etc/os-release ] && grep -q "^NAME=\"Ubuntu\"" /etc/os-release; then
   if grep -q "^VERSION=.*LTS" /etc/os-release; then
     true
+  elif grep -q "^PRETTY_NAME=.*LTS" /etc/os-release; then
+    true
   else
     throw_fatal "Sorry. Ubuntu none LTS versions are not supported."
   fi
