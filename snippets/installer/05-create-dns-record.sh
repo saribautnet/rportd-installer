@@ -42,7 +42,7 @@ if [ -z "$FQDN" ]; then
   FQDN=$(curl --ipv4 -Ss https://freedns.rport.io -F create=random)
   DNS_CREATED=1
   PUBLIC_FQDN=1
-  throw_info "Creating random FQDN on Freedns *.users.rport.io."
+  throw_info "Creating random FQDN ${FQDN} on Freedns *.users.rport.io."
   wait_for_dns_ready
 elif [[ $FQDN =~ (.*)\.users\.rport\.io$ ]]; then
   # Register a custom DNS record if no FQDN is specified using the free dns service of RPort
